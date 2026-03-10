@@ -47,7 +47,7 @@
     "scopes": ["addon_parent"],
     "settings": true,
     "events": ["startup"],
-    "permissions": ["contextualIdentities"],
+    "permissions": ["contextualIdentities", "contextualIdentities.readOnly"],
     "paths": [["contextualIdentities"]]
   },
   "devtools": {

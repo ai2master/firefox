@@ -3,11 +3,11 @@
     "namespace": "manifest",
     "types": [
       {
-        "$extend": "PermissionNoPrompt",
+        "$extend": "OptionalPermissionNoPrompt",
         "choices": [
           {
             "type": "string",
-            "enum": ["contextualIdentities"]
+            "enum": ["contextualIdentities", "contextualIdentities.readOnly"]
           }
         ]
       }
@@ -16,7 +16,7 @@
   {
     "namespace": "contextualIdentities",
     "description": "Use the <code>browser.contextualIdentities</code> API to query and modify contextual identity, also called as containers.",
-    "permissions": ["contextualIdentities"],
+    "permissions": ["contextualIdentities", "contextualIdentities.readOnly"],
     "types": [
       {
         "id": "ContextualIdentity",

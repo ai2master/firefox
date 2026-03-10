@@ -87,6 +87,14 @@ const checkAPIEnabled = () => {
   }
 };
 
+const checkWritePermission = extension => {
+  if (!extension.hasPermission("contextualIdentities")) {
+    throw new ExtensionError(
+      "The contextualIdentities permission is required to modify containers"
+    );
+  }
+};
+
 const convertIdentityFromObserver = wrappedIdentity => {
   let identity = wrappedIdentity.wrappedJSObject;
   let iconUrl, colorCode;
@@ -154,6 +162,10 @@ this.contextualIdentities = class extends ExtensionAPIPersistent {
   onStartup() {
     let { extension } = this;
 
+    // Only enable the container feature when the full contextualIdentities
+    // permission is granted. The readOnly permission should NOT enable
+    // containers, allowing extensions like TreeStyleTab to read container
+    // info without forcing the feature on users (Bug 1386673).
     if (extension.hasPermission("contextualIdentities")) {
       // Turn on contextual identities, and never turn it off.  We handle
       // this here to ensure prefs are set when an addon is enabled.
@@ -169,10 +181,22 @@ this.contextualIdentities = class extends ExtensionAPIPersistent {
   }
 
   getAPI(context) {
+    let { extension } = context;
+    let hasFullPermission = extension.hasPermission("contextualIdentities");
+    let hasReadOnlyPermission =
+      extension.hasPermission("contextualIdentities.readOnly");
+
     let self = {
       contextualIdentities: {
         async get(cookieStoreId) {
-          checkAPIEnabled();
+          // With readOnly permission and containers disabled, return null
+          // instead of throwing, so extensions can gracefully handle this.
+          if (!containersEnabled) {
+            if (hasReadOnlyPermission && !hasFullPermission) {
+              return null;
+            }
+            checkAPIEnabled();
+          }
           let containerId = getContainerForCookieStoreId(cookieStoreId);
           if (!containerId) {
             throw new ExtensionError(
@@ -186,7 +210,14 @@ this.contextualIdentities = class extends ExtensionAPIPersistent {
         },
 
         async query(details) {
-          checkAPIEnabled();
+          // With readOnly permission and containers disabled, return empty
+          // array instead of throwing (Bug 1386673).
+          if (!containersEnabled) {
+            if (hasReadOnlyPermission && !hasFullPermission) {
+              return [];
+            }
+            checkAPIEnabled();
+          }
           let identities = [];
           ContextualIdentityService.getPublicIdentities().forEach(identity => {
             if (
@@ -205,6 +236,8 @@ this.contextualIdentities = class extends ExtensionAPIPersistent {
         },
 
         async create(details) {
+          checkWritePermission(extension);
+          checkAPIEnabled();
           // Lets prevent making containers that are not valid
           getContainerIcon(details.icon);
           getContainerColor(details.color);
@@ -218,6 +251,7 @@ this.contextualIdentities = class extends ExtensionAPIPersistent {
         },
 
         async update(cookieStoreId, details) {
+          checkWritePermission(extension);
           checkAPIEnabled();
           let containerId = getContainerForCookieStoreId(cookieStoreId);
           if (!containerId) {
@@ -265,6 +299,7 @@ this.contextualIdentities = class extends ExtensionAPIPersistent {
         },
 
         async move(cookieStoreIds, position) {
+          checkWritePermission(extension);
           checkAPIEnabled();
           if (!Array.isArray(cookieStoreIds)) {
             cookieStoreIds = [cookieStoreIds];
@@ -306,6 +341,7 @@ this.contextualIdentities = class extends ExtensionAPIPersistent {
         },
 
         async remove(cookieStoreId) {
+          checkWritePermission(extension);
           checkAPIEnabled();
           let containerId = getContainerForCookieStoreId(cookieStoreId);
           if (!containerId) {
