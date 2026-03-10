@@ -6660,6 +6660,13 @@ var SessionStoreInternal = {
       tab.canonicalUrl = tabData.canonicalUrl;
     }
 
+    // Restore hibernated state if the tab was hibernated before shutdown.
+    if (tabData.hibernated && tabData.hibernationTabId) {
+      tab.setAttribute("hibernated", "true");
+      tab._hibernationTabId = tabData.hibernationTabId;
+      tabbrowser._tabAttrModified(tab, ["hibernated"]);
+    }
+
     // Update tab label and icon to show something
     // while we wait for the messages to be processed.
     this.updateTabLabelAndIcon(tab, tabData);
@@ -7476,8 +7483,8 @@ var SessionStoreInternal = {
       !(
         aTabState.entries.length == 1 &&
         (entryUrl == "about:blank" ||
-          (entryUrl == "about:home" && !aTabState.splitViewId) ||
-          (entryUrl == "about:newtab" && !aTabState.splitViewId) ||
+          entryUrl == "about:home" ||
+          entryUrl == "about:newtab" ||
           entryUrl == "about:privatebrowsing") &&
         !aTabState.userTypedValue
       )

@@ -114,8 +114,12 @@
           "moz-src:///browser/components/tabbrowser/SmartTabGrouping.sys.mjs",
         SponsorProtection:
           "moz-src:///browser/components/newtab/SponsorProtection.sys.mjs",
+        TabHibernation:
+          "moz-src:///browser/components/tabbrowser/TabHibernation.sys.mjs",
         TabMetrics:
           "moz-src:///browser/components/tabbrowser/TabMetrics.sys.mjs",
+        TabPause:
+          "moz-src:///browser/components/tabbrowser/TabPause.sys.mjs",
         TabStateFlusher:
           "resource:///modules/sessionstore/TabStateFlusher.sys.mjs",
         TaskbarTabsUtils:
@@ -224,6 +228,13 @@
 
       this.tabContainer.init();
       this._setupInitialBrowserAndTab();
+
+      // Schedule cleanup of old hibernation files during idle.
+      ChromeUtils.idleDispatch(() => {
+        this.TabHibernation.cleanupOldHibernations().catch(ex => {
+          console.error("TabHibernation startup cleanup failed:", ex);
+        });
+      });
 
       if (
         Services.prefs.getIntPref("browser.display.document_color_use") == 2
@@ -3052,6 +3063,143 @@
       return true;
     }
 
+    // ---- Tab Hibernation ----
+
+    /**
+     * Hibernate a tab: save its complete page content to disk and optionally
+     * discard the browser to free memory.
+     *
+     * @param {MozTabbrowserTab} aTab
+     */
+    async hibernateTab(aTab) {
+      if (!aTab || aTab.closing || aTab.hasAttribute("hibernated")) {
+        return;
+      }
+      if (aTab.hasAttribute("busy") || aTab.hasAttribute("pending")) {
+        console.warn("Cannot hibernate a tab that is still loading.");
+        return;
+      }
+
+      let browser = aTab.linkedBrowser;
+      if (!browser) {
+        return;
+      }
+
+      try {
+        let result = await this.TabHibernation.hibernateTab(browser);
+
+        // Mark the tab as hibernated and store the hibernation ID.
+        aTab.setAttribute("hibernated", "true");
+        aTab._hibernationTabId = result.tabId;
+        this._tabAttrModified(aTab, ["hibernated"]);
+
+        // Flush state and discard the browser to free memory.
+        await this.prepareDiscardBrowser(aTab);
+        this.discardBrowser(aTab, true);
+
+        let hibernateEvt = new CustomEvent("TabHibernated", {
+          bubbles: true,
+        });
+        aTab.dispatchEvent(hibernateEvt);
+      } catch (ex) {
+        console.error("Failed to hibernate tab:", ex);
+        aTab.removeAttribute("hibernated");
+        delete aTab._hibernationTabId;
+      }
+    }
+
+    /**
+     * Restore a hibernated tab from its saved content on disk.
+     *
+     * @param {MozTabbrowserTab} aTab
+     */
+    async restoreHibernatedTab(aTab) {
+      if (!aTab || !aTab.hasAttribute("hibernated")) {
+        return;
+      }
+
+      let tabId = aTab._hibernationTabId;
+      if (!tabId) {
+        console.warn("No hibernation ID found on tab.");
+        aTab.removeAttribute("hibernated");
+        return;
+      }
+
+      let browser = aTab.linkedBrowser;
+      if (!browser) {
+        return;
+      }
+
+      try {
+        await this.TabHibernation.restoreTab(browser, tabId);
+
+        aTab.removeAttribute("hibernated");
+        delete aTab._hibernationTabId;
+        this._tabAttrModified(aTab, ["hibernated"]);
+
+        let restoreEvt = new CustomEvent("TabHibernationRestored", {
+          bubbles: true,
+        });
+        aTab.dispatchEvent(restoreEvt);
+      } catch (ex) {
+        console.error("Failed to restore hibernated tab:", ex);
+      }
+    }
+
+    // ---- Tab Pause (JS Suspension) ----
+
+    /**
+     * Pause all JavaScript execution in a tab.
+     *
+     * @param {MozTabbrowserTab} aTab
+     */
+    pauseTab(aTab) {
+      if (!aTab || aTab.closing || aTab.hasAttribute("paused")) {
+        return;
+      }
+      if (aTab.hasAttribute("busy") || aTab.hasAttribute("pending")) {
+        console.warn("Cannot pause a tab that is still loading.");
+        return;
+      }
+
+      let browser = aTab.linkedBrowser;
+      if (!browser) {
+        return;
+      }
+
+      if (this.TabPause.pauseTab(browser)) {
+        aTab.setAttribute("paused", "true");
+        this._tabAttrModified(aTab, ["paused"]);
+
+        let pauseEvt = new CustomEvent("TabPaused", { bubbles: true });
+        aTab.dispatchEvent(pauseEvt);
+      }
+    }
+
+    /**
+     * Resume JavaScript execution in a paused tab.
+     *
+     * @param {MozTabbrowserTab} aTab
+     */
+    resumeTab(aTab) {
+      if (!aTab || !aTab.hasAttribute("paused")) {
+        return;
+      }
+
+      let browser = aTab.linkedBrowser;
+      if (!browser) {
+        return;
+      }
+
+      if (this.TabPause.resumeTab(browser)) {
+        aTab.removeAttribute("paused");
+        this._tabAttrModified(aTab, ["paused"]);
+
+        let resumeEvt = new CustomEvent("TabResumed", { bubbles: true });
+        aTab.dispatchEvent(resumeEvt);
+      }
+    }
+
     /**
      * Loads a tab with a default null principal unless specified
      *
@@ -4077,11 +4225,7 @@
       }
 
       let lazyBrowserURI;
-      if (
-        createLazyBrowser &&
-        uriString != "about:blank" &&
-        uriString != "about:opentabs"
-      ) {
+      if (createLazyBrowser && uriString != "about:blank") {
         lazyBrowserURI = aURIObject;
         uriString = "about:blank";
       }
@@ -10386,14 +10530,9 @@ var TabContextMenu = {
     let contextSeparateSplitView = document.getElementById(
       "context_separateSplitView"
     );
-    let contextReverseSplitView = document.getElementById(
-      "context_reverseSplitView"
-    );
     let hasSplitViewTab = this.contextTabs.some(tab => tab.splitview);
     contextMoveTabToNewSplitView.hidden = !splitViewEnabled || hasSplitViewTab;
     contextSeparateSplitView.hidden = !splitViewEnabled || !hasSplitViewTab;
-    contextReverseSplitView.hidden =
-      !splitViewEnabled || !hasSplitViewTab || this.multiselected;
     if (splitViewEnabled) {
       contextMoveTabToNewSplitView.removeAttribute("data-l10n-id");
       contextMoveTabToNewSplitView.setAttribute(
@@ -10434,6 +10573,35 @@ var TabContextMenu = {
       );
     } else {
       unloadTabItem.hidden = true;
+    }
+
+    // Hibernate / Restore Hibernated Tab
+    {
+      let isHibernated = this.contextTab.hasAttribute("hibernated");
+      let canHibernate =
+        !isHibernated &&
+        !this.contextTab.hasAttribute("busy") &&
+        !this.contextTab.hasAttribute("pending") &&
+        this.contextTab.linkedPanel &&
+        this.contextTab.linkedBrowser?.isRemoteBrowser;
+      document.getElementById("context_hibernateTab").hidden = !canHibernate;
+      document.getElementById("context_restoreHibernatedTab").hidden =
+        !isHibernated;
+
+      // Pause / Resume Tab
+      let isPaused = this.contextTab.hasAttribute("paused");
+      let canPause =
+        !isPaused &&
+        !isHibernated &&
+        !this.contextTab.hasAttribute("busy") &&
+        !this.contextTab.hasAttribute("pending") &&
+        this.contextTab.linkedPanel;
+      document.getElementById("context_pauseTab").hidden = !canPause;
+      document.getElementById("context_resumeTab").hidden = !isPaused;
+
+      // Show the separator only if any of these items are visible.
+      document.getElementById("context_hibernatePauseSeparator").hidden =
+        !canHibernate && !isHibernated && !canPause && !isPaused;
     }
 
     // Show Play Tab menu item if the tab has attribute activemedia-blocked
@@ -10867,34 +11035,14 @@ var TabContextMenu = {
   },
 
   addTabsToSavedGroup(groupId) {
-    let seen = new Set();
-    let tabs = [];
-    for (let tab of this.contextTabs) {
-      if (tab.splitview) {
-        for (let splitTab of tab.splitview.tabs) {
-          if (!seen.has(splitTab)) {
-            seen.add(splitTab);
-            tabs.push(splitTab);
-          }
-        }
-      } else if (!seen.has(tab)) {
-        seen.add(tab);
-        tabs.push(tab);
-      }
-    }
     SessionStore.addTabsToSavedGroup(
       groupId,
-      tabs,
+      this.contextTabs,
       gBrowser.TabMetrics.userTriggeredContext(
         gBrowser.TabMetrics.METRIC_SOURCE.TAB_MENU
       )
     );
-    gBrowser.removeTabs(tabs, {
-      animate: true,
-      ...gBrowser.TabMetrics.userTriggeredContext(
-        gBrowser.TabMetrics.METRIC_SOURCE.TAB_STRIP
-      ),
-    });
+    this.closeContextTabs();
   },
 
   ungroupTabs() {
@@ -10956,27 +11104,15 @@ var TabContextMenu = {
     );
   },
 
-  reverseSplitView() {
-    this.contextTab.splitview?.reverseTabs("menu");
-  },
-
-  /**
-   * @param {MozMenuItem} menuItem
-   */
   addNewBadge(menuItem) {
     menuItem.setAttribute(
       "badge",
       gBrowser.tabLocalization.formatValueSync("tab-context-badge-new")
     );
-    menuItem.classList.add("badge-new");
   },
 
-  /**
-   * @param {MozMenuItem} menuItem
-   */
   removeNewBadge(menuItem) {
     menuItem.removeAttribute("badge");
-    menuItem.classList.remove("badge-new");
   },
 
   deleteTabNotes() {

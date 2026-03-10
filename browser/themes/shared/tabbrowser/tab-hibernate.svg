@@ -1,0 +1,7 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="context-fill" fill-opacity="context-fill-opacity">
+  <!-- Snowflake icon representing frozen / hibernated state -->
+  <path d="M8 1a.5.5 0 0 1 .5.5v3.793l1.646-1.647a.5.5 0 0 1 .708.708L8.5 6.707V7.5h.793l2.353-2.354a.5.5 0 0 1 .708.708L10.707 7.5H14.5a.5.5 0 0 1 0 1h-3.793l1.647 1.646a.5.5 0 0 1-.708.708L9.293 8.5H8.5v.793l2.354 2.353a.5.5 0 0 1-.708.708L8.5 10.707V14.5a.5.5 0 0 1-1 0v-3.793l-1.646 1.647a.5.5 0 0 1-.708-.708L7.5 9.293V8.5h-.793l-2.353 2.354a.5.5 0 0 1-.708-.708L5.293 8.5H1.5a.5.5 0 0 1 0-1h3.793L3.646 5.854a.5.5 0 1 1 .708-.708L6.707 7.5H7.5v-.793L5.146 4.354a.5.5 0 1 1 .708-.708L7.5 5.293V1.5A.5.5 0 0 1 8 1z"/>
+</svg>

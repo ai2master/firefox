@@ -76,6 +76,12 @@ class _TabState {
 
     tabData.hidden = tab.hidden;
 
+    // Persist hibernation state so it survives browser restart.
+    if (tab.hasAttribute("hibernated")) {
+      tabData.hibernated = true;
+      tabData.hibernationTabId = tab._hibernationTabId || "";
+    }
+
     if (browser.audioMuted) {
       tabData.muted = true;
       tabData.muteReason = tab.muteReason;

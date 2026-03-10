@@ -37,9 +37,6 @@ document.addEventListener(
         case "context_separateSplitView":
           TabContextMenu.unsplitTabs();
           break;
-        case "context_reverseSplitView":
-          TabContextMenu.reverseSplitView();
-          break;
         case "context_reloadTab":
           gBrowser.reloadTab(TabContextMenu.contextTab);
           break;
@@ -142,6 +139,18 @@ document.addEventListener(
           break;
         case "context_unloadTab":
           TabContextMenu.explicitUnloadTabs();
+          break;
+        case "context_hibernateTab":
+          gBrowser.hibernateTab(TabContextMenu.contextTab);
+          break;
+        case "context_restoreHibernatedTab":
+          gBrowser.restoreHibernatedTab(TabContextMenu.contextTab);
+          break;
+        case "context_pauseTab":
+          gBrowser.pauseTab(TabContextMenu.contextTab);
+          break;
+        case "context_resumeTab":
+          gBrowser.resumeTab(TabContextMenu.contextTab);
           break;
         case "context_fullscreenAutohide":
           FullScreen.setAutohide();

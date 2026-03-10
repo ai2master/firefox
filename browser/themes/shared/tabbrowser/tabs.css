@@ -4,19 +4,16 @@
 
 :root {
   --tabstrip-inner-border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-  --tab-label-height: 2.7em;
+  --tabstrip-min-height: calc(var(--tab-min-height) + 2 * var(--tab-block-margin));
   --tab-min-height: 36px;
   --tab-group-suggestions-loading-animation-color-1: color-mix(in srgb, currentColor 5%, transparent);
   --tab-group-suggestions-loading-animation-color-2: color-mix(in srgb, currentColor 35%, transparent);
   &[uidensity="compact"] {
-    --tab-label-height: 2em;
     --tab-min-height: 29px;
   }
   &[uidensity="touch"] {
-    --tab-label-height: 2.8em;
     --tab-min-height: 41px;
   }
-  --tabstrip-min-height: calc(var(--tab-min-height) + 2 * var(--tab-block-margin));
   --tab-group-label-height: max(1.5em, var(--tab-min-height) - 14px);
   --tab-group-label-padding: 4px;
   --tab-group-label-highlight-thickness: 3px;
@@ -753,6 +750,67 @@ tab-split-view-wrapper[dragtarget] {
 }
 
 /*
+ * Hibernated tab visual indicators.
+ * A hibernated tab has its page content saved to disk; its favicon is dimmed
+ * and a snowflake overlay is shown on pinned / collapsed-vertical tabs.
+ */
+.tabbrowser-tab[hibernated] {
+  & .tab-icon-image {
+    opacity: 0.55;
+  }
+
+  & .tab-label {
+    font-style: italic;
+    opacity: 0.8;
+  }
+
+  & .tab-icon-overlay {
+    &[hibernated] {
+      list-style-image: url("chrome://browser/skin/tabbrowser/tab-hibernate.svg");
+    }
+
+    &[pinned][hibernated],
+    &[hibernated]:not([soundplaying], [muted], [activemedia-blocked], [crashed]) {
+      display: revert;
+      -moz-context-properties: fill;
+      fill: light-dark(rgb(0, 97, 224), rgb(100, 170, 255));
+      border-radius: var(--border-radius-circle);
+      background-color: var(--lwt-accent-color, transparent);
+    }
+  }
+}
+
+/*
+ * Paused tab visual indicators.
+ * A paused tab has its JavaScript execution suspended; the favicon is
+ * desaturated and a pause-icon overlay is shown.
+ */
+.tabbrowser-tab[paused] {
+  & .tab-icon-image {
+    filter: grayscale(60%);
+  }
+
+  & .tab-label {
+    color: light-dark(#b35900, #ffb066);
+  }
+
+  & .tab-icon-overlay {
+    &[paused] {
+      list-style-image: url("chrome://browser/skin/tabbrowser/tab-pause.svg");
+    }
+
+    &[pinned][paused],
+    &[paused]:not([soundplaying], [muted], [activemedia-blocked], [crashed]) {
+      display: revert;
+      -moz-context-properties: fill;
+      fill: light-dark(rgb(180, 90, 0), rgb(255, 176, 102));
+      border-radius: var(--border-radius-circle);
+      background-color: var(--lwt-accent-color, transparent);
+    }
+  }
+}
+
+/*
  * Tab note icon that overlays the favicon for pinned tabs and the collapsed
  * vertical tab strip. The horizontal tab strip and expanded vertical tab strip
  * get a separate, more spacious treatment using the `.tab-notes-icon` image.
@@ -856,7 +914,7 @@ tab-split-view-wrapper[dragtarget] {
   overflow: hidden;
 
   #tabbrowser-tabs:not([secondarytext-unsupported], [orient="vertical"]) & {
-    height: var(--tab-label-height);
+    height: 2.7em;
   }
 
   &[pinned] {
@@ -934,6 +992,9 @@ tab-split-view-wrapper[dragtarget] {
 }
 
 .tab-icon-sound-label {
+  /* Set height back to equivalent of parent's 1em based
+     on the .tab-icon-sound having a reduced font-size */
+  height: 1.3333em;
   white-space: nowrap;
   margin: 0;
 }
@@ -1254,18 +1315,12 @@ tab-group > tab-split-view-wrapper {
   .tabbrowser-tab {
     padding-inline: 2px;
     .tab-background {
-      min-height: calc(var(--tab-min-height) - 4px); /* exclude the 4px padding normally added */
+      --tab-min-height: 32px;
 
       .tab-group-line {
         inset-block-end: calc(((var(--tab-block-margin) / 2) + var(--space-xsmall)) * -1);
         inset-inline-start: calc(var(--space-small) * -2);
       }
-    }
-    .tab-label-container {
-      /* Nip and tuck: we can't subtract all the padding and margin added for the
-         split-view-wrapper without potentially regressing secondarytext labels but
-         8px seems a good compromise. */
-      height: calc(var(--tab-label-height) - 8px);
     }
 
     tab-group & {
