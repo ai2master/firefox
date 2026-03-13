@@ -1,0 +1,13 @@
+name: Create Repo
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -d "{\"name\":\"ark-manager\",\"private\":false}" \
+            https://api.github.com/user/repos
