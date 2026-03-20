@@ -229,7 +229,10 @@
       this.tabContainer.init();
       this._setupInitialBrowserAndTab();
 
-      // Schedule cleanup of old hibernation files during idle.
+      // [Tab Hibernation] Schedule cleanup of old hibernation files during idle.
+      // [标签页休眠] 在空闲时调度清理旧的休眠文件。
+      // Removes hibernation data older than 30 days to prevent unbounded disk usage.
+      // 删除超过 30 天的休眠数据，防止磁盘使用量无限增长。
       ChromeUtils.idleDispatch(() => {
         this.TabHibernation.cleanupOldHibernations().catch(ex => {
           console.error("TabHibernation startup cleanup failed:", ex);
@@ -3063,13 +3066,25 @@
       return true;
     }
 
-    // ---- Tab Hibernation ----
+    // ====================================================================
+    // Tab Hibernation (标签页休眠)
+    // Saves complete page content to disk, independent of browser cache.
+    // 将完整页面内容保存到磁盘，不依赖浏览器缓存。
+    // ====================================================================
 
     /**
-     * Hibernate a tab: save its complete page content to disk and optionally
+     * Hibernate a tab: save its complete page content to disk and then
      * discard the browser to free memory.
      *
-     * @param {MozTabbrowserTab} aTab
+     * 休眠标签页：将其完整页面内容保存到磁盘，然后丢弃浏览器以释放内存。
+     *
+     * After hibernation, the tab shows a snowflake icon overlay and italic
+     * label. The page can be restored offline via restoreHibernatedTab().
+     *
+     * 休眠后，标签页显示雪花图标覆盖层和斜体标签。页面可以通过
+     * restoreHibernatedTab() 离线恢复。
+     *
+     * @param {MozTabbrowserTab} aTab  The tab to hibernate (要休眠的标签页)
      */
     async hibernateTab(aTab) {
       if (!aTab || aTab.closing || aTab.hasAttribute("hibernated")) {
@@ -3110,8 +3125,17 @@
 
     /**
      * Restore a hibernated tab from its saved content on disk.
+     * 从磁盘上保存的内容恢复休眠的标签页。
      *
-     * @param {MozTabbrowserTab} aTab
+     * Loads the saved page.html via file:// URI. If the content is expired
+     * (based on HTTP cache headers captured at hibernation time), shows a
+     * notification bar with a "Reload from network" button.
+     *
+     * 通过 file:// URI 加载保存的 page.html。如果内容已过期（基于休眠时
+     * 捕获的 HTTP 缓存头），显示带「从网络重新加载」按钮的通知栏。
+     *
+     * @param {MozTabbrowserTab} aTab  The hibernated tab to restore
+     *                                 (要恢复的休眠标签页)
      */
     async restoreHibernatedTab(aTab) {
       if (!aTab || !aTab.hasAttribute("hibernated")) {
@@ -3146,12 +3170,23 @@
       }
     }
 
-    // ---- Tab Pause (JS Suspension) ----
+    // ====================================================================
+    // Tab Pause / JS Suspension (标签页暂停 / JS 挂起)
+    // Suspends all JavaScript execution using suspendTimeouts + Debugger API.
+    // 使用 suspendTimeouts + Debugger API 暂停所有 JavaScript 执行。
+    // ====================================================================
 
     /**
      * Pause all JavaScript execution in a tab.
+     * 暂停标签页中的所有 JavaScript 执行。
      *
-     * @param {MozTabbrowserTab} aTab
+     * The tab shows an orange pause icon overlay. All timers, event handlers,
+     * and active scripts are frozen until resumeTab() is called.
+     *
+     * 标签页显示橙色暂停图标覆盖层。所有计时器、事件处理程序和活动脚本
+     * 都会被冻结，直到调用 resumeTab()。
+     *
+     * @param {MozTabbrowserTab} aTab  The tab to pause (要暂停的标签页)
      */
     pauseTab(aTab) {
       if (!aTab || aTab.closing || aTab.hasAttribute("paused")) {
@@ -3178,8 +3213,15 @@
 
     /**
      * Resume JavaScript execution in a paused tab.
+     * 恢复已暂停标签页中的 JavaScript 执行。
      *
-     * @param {MozTabbrowserTab} aTab
+     * Removes the pause icon overlay and restores all timers,
+     * event handlers, and script execution.
+     *
+     * 移除暂停图标覆盖层并恢复所有计时器、事件处理程序和脚本执行。
+     *
+     * @param {MozTabbrowserTab} aTab  The paused tab to resume
+     *                                 (要恢复的已暂停标签页)
      */
     resumeTab(aTab) {
       if (!aTab || !aTab.hasAttribute("paused")) {
@@ -10575,7 +10617,12 @@ var TabContextMenu = {
       unloadTabItem.hidden = true;
     }
 
-    // Hibernate / Restore Hibernated Tab
+    // Hibernate / Restore Hibernated Tab — Context menu visibility logic
+    // 休眠 / 恢复休眠标签页 — 右键菜单可见性逻辑
+    // Show "Hibernate Tab" only when tab is loaded, not pending, and not already hibernated.
+    // Show "Restore Hibernated Tab" only when tab IS hibernated.
+    // 仅在标签页已加载、非待处理且未休眠时显示「休眠标签页」。
+    // 仅在标签页已休眠时显示「恢复休眠的标签页」。
     {
       let isHibernated = this.contextTab.hasAttribute("hibernated");
       let canHibernate =
@@ -10588,7 +10635,12 @@ var TabContextMenu = {
       document.getElementById("context_restoreHibernatedTab").hidden =
         !isHibernated;
 
-      // Pause / Resume Tab
+      // Pause / Resume Tab — Context menu visibility logic
+      // 暂停 / 恢复标签页 — 右键菜单可见性逻辑
+      // Show "Pause Tab" only when tab is not paused, not hibernated, not loading.
+      // Show "Resume Tab" only when tab IS paused.
+      // 仅在标签页未暂停、未休眠、未加载中时显示「暂停标签页」。
+      // 仅在标签页已暂停时显示「恢复标签页」。
       let isPaused = this.contextTab.hasAttribute("paused");
       let canPause =
         !isPaused &&

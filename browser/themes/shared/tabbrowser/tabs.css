@@ -750,20 +750,35 @@ tab-split-view-wrapper[dragtarget] {
 }
 
 /*
- * Hibernated tab visual indicators.
- * A hibernated tab has its page content saved to disk; its favicon is dimmed
- * and a snowflake overlay is shown on pinned / collapsed-vertical tabs.
+ * ============================================================================
+ * Hibernated Tab Visual Indicators (休眠标签页视觉指示器)
+ * ============================================================================
+ *
+ * [English]
+ * A hibernated tab has its complete page content saved to disk. Visual cues:
+ *   - Favicon opacity 55% (dimmed) — 网站图标不透明度 55%（变暗）
+ *   - Tab label italic + 80% opacity — 标签斜体 + 80% 不透明度
+ *   - Blue snowflake overlay — 蓝色雪花覆盖层
+ *
+ * [中文]
+ * 休眠标签页的完整页面内容已保存到磁盘。视觉提示：
+ *   - 网站图标变暗（不透明度 55%）
+ *   - 标签标签以斜体显示，不透明度 80%
+ *   - 蓝色雪花图标覆盖层
  */
 .tabbrowser-tab[hibernated] {
+  /* Dim favicon — 使网站图标变暗 */
   & .tab-icon-image {
     opacity: 0.55;
   }
 
+  /* Italic + dimmed label for "frozen" appearance — 斜体+变暗的「冻结」外观 */
   & .tab-label {
     font-style: italic;
     opacity: 0.8;
   }
 
+  /* Snowflake overlay — 雪花覆盖层 */
   & .tab-icon-overlay {
     &[hibernated] {
       list-style-image: url("chrome://browser/skin/tabbrowser/tab-hibernate.svg");
@@ -781,19 +796,34 @@ tab-split-view-wrapper[dragtarget] {
 }
 
 /*
- * Paused tab visual indicators.
- * A paused tab has its JavaScript execution suspended; the favicon is
- * desaturated and a pause-icon overlay is shown.
+ * ============================================================================
+ * Paused Tab Visual Indicators (暂停标签页视觉指示器)
+ * ============================================================================
+ *
+ * [English]
+ * A paused tab has all JS suspended (timers + Debugger API). Visual cues:
+ *   - Favicon grayscale 60% — 网站图标灰度 60%
+ *   - Tab label orange — 标签标签橙色
+ *   - Orange pause-icon overlay — 橙色暂停图标覆盖层
+ *
+ * [中文]
+ * 暂停标签页的所有 JS 已被挂起（计时器 + Debugger API）。视觉提示：
+ *   - 网站图标去饱和 60%
+ *   - 标签标签着色为橙色
+ *   - 橙色暂停图标覆盖层
  */
 .tabbrowser-tab[paused] {
+  /* Desaturate favicon — 使网站图标去饱和 */
   & .tab-icon-image {
     filter: grayscale(60%);
   }
 
+  /* Orange label — warm warning — 橙色标签——温和的警告 */
   & .tab-label {
     color: light-dark(#b35900, #ffb066);
   }
 
+  /* Pause icon overlay — 暂停图标覆盖层 */
   & .tab-icon-overlay {
     &[paused] {
       list-style-image: url("chrome://browser/skin/tabbrowser/tab-pause.svg");

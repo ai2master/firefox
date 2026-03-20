@@ -262,10 +262,18 @@
       return this.hasAttribute("activemedia-blocked");
     }
 
+    /**
+     * Whether this tab is hibernated (page saved to disk).
+     * 此标签页是否已休眠（页面已保存到磁盘）。
+     */
     get hibernated() {
       return this.hasAttribute("hibernated");
     }
 
+    /**
+     * Whether this tab's JavaScript is paused/suspended.
+     * 此标签页的 JavaScript 是否已暂停/挂起。
+     */
     get paused() {
       return this.hasAttribute("paused");
     }

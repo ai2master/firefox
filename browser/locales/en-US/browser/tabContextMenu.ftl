@@ -100,6 +100,13 @@ move-to-new-profile =
 tab-context-close-multiple-tabs =
     .label = Close Multiple Tabs
     .accesskey = M
+# Tab Hibernation & Pause context menu items
+# 标签页休眠与暂停右键菜单项
+#
+# "Hibernate Tab" saves the complete page content to disk (HTML + CSS + images).
+# "休眠标签页"将完整页面内容保存到磁盘（HTML + CSS + 图片）。
+# "Pause Tab" suspends all JavaScript execution in the tab.
+# "暂停标签页"挂起标签页中所有 JavaScript 执行。
 tab-context-hibernate-tab =
     .label = Hibernate Tab
     .accesskey = H

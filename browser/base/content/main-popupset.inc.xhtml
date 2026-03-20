@@ -57,16 +57,26 @@
     <menuitem id="context_unloadTab"
               data-lazy-l10n-id="tab-context-unload-n-tabs"
               data-l10n-args='{"tabCount": 1}'/>
+    <!-- ============================================================ -->
+    <!-- Tab Hibernation & Pause context menu items                   -->
+    <!-- 标签页休眠与暂停右键菜单项                                     -->
+    <!-- Visibility is controlled by tabbrowser.js updateContextMenu() -->
+    <!-- 可见性由 tabbrowser.js updateContextMenu() 控制               -->
+    <!-- ============================================================ -->
     <menuseparator id="context_hibernatePauseSeparator"/>
+    <!-- Hibernate Tab: save complete page to disk (休眠标签页：保存完整页面到磁盘) -->
     <menuitem id="context_hibernateTab"
               data-lazy-l10n-id="tab-context-hibernate-tab"
               hidden="true"/>
+    <!-- Restore Hibernated Tab: load saved page from disk (恢复休眠标签页：从磁盘加载保存的页面) -->
     <menuitem id="context_restoreHibernatedTab"
               data-lazy-l10n-id="tab-context-restore-hibernated-tab"
               hidden="true"/>
+    <!-- Pause Tab: suspend all JS execution (暂停标签页：挂起所有 JS 执行) -->
     <menuitem id="context_pauseTab"
               data-lazy-l10n-id="tab-context-pause-tab"
               hidden="true"/>
+    <!-- Resume Tab: restore JS execution (恢复标签页：恢复 JS 执行) -->
     <menuitem id="context_resumeTab"
               data-lazy-l10n-id="tab-context-resume-tab"
               hidden="true"/>
